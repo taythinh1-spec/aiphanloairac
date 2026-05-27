@@ -39,10 +39,11 @@ else:
     logger.warning("Chưa cấu hình MONGO_URI — lịch sử quét sẽ không được lưu.")
 
 # ============================================================
-# HẰNG SỐ
+# HẰNG SỐ & BIẾN TOÀN CỤC (TỐI ƯU HÓA CACHE)
 # ============================================================
 
-# Đã xóa GEMINI_URL ở đây để hệ thống tự động quét đường dẫn
+# Biến bộ nhớ đệm lưu tên model để tránh quét đi quét lại gây chậm hệ thống
+CACHED_MODEL_NAME = None
 
 GEMINI_PROMPT = (
     "Bạn là một chuyên gia phân loại rác thông minh. "
@@ -70,11 +71,11 @@ def extract_base64(image_data: str) -> tuple[str, str]:
     if "," in image_data:
         header, data = image_data.split(",", 1)
         # header có dạng: data:image/png;base64
-        if "image/png" in header:
+        if "image/png" in header.lower():
             mime_type = "image/png"
-        elif "image/webp" in header:
+        elif "image/webp" in header.lower():
             mime_type = "image/webp"
-        elif "image/jpeg" in header or "image/jpg" in header:
+        elif "image/jpeg" in header.lower() or "image/jpg" in header.lower():
             mime_type = "image/jpeg"
         return data, mime_type
     return image_data, mime_type
@@ -83,47 +84,55 @@ def extract_base64(image_data: str) -> tuple[str, str]:
 def get_best_model(api_key: str) -> str:
     """
     Tự động gọi API của Google để lấy danh sách các model khả dụng cho tài khoản.
-    Tự động lọc và trả về tên model dòng 'flash' hỗ trợ 'generateContent'.
+    Sử dụng cơ chế bộ nhớ đệm (Cache) để tăng tốc độ phản hồi tối đa.
     """
+    global CACHED_MODEL_NAME
+    
+    # Nếu đã có sẵn tên model từ lần quét trước, trả về ngay lập tức (mất 0 giây)
+    if CACHED_MODEL_NAME:
+        return CACHED_MODEL_NAME
+
     url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
     try:
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, timeout=5)  # Khống chế thời gian chờ 5 giây tránh treo server
         if resp.status_code == 200:
             data = resp.json()
             available_models = data.get("models", [])
             
-            # Ưu tiên 1: Tìm model có chữ 'flash' và hỗ trợ 'generateContent'
+            # Ưu tiên 1: Tìm model dòng 'flash' (VD: gemini-2.5-flash, gemini-2.0-flash)
             for model in available_models:
                 name = model.get("name", "")
                 methods = model.get("supportedGenerationMethods", [])
                 if "generateContent" in methods and "flash" in name:
-                    logger.info("Đã tự động tìm thấy model tối ưu: %s", name)
-                    return name
+                    logger.info("Đã tự động định tuyến cấu hình đến model tối ưu: %s", name)
+                    CACHED_MODEL_NAME = name
+                    return CACHED_MODEL_NAME
             
-            # Ưu tiên 2: Nếu không có flash, lấy model bất kỳ hỗ trợ generateContent
+            # Ưu tiên 2: Nếu không thấy dòng flash, dùng model bất kỳ có hỗ trợ phân tích nội dung
             for model in available_models:
                 if "generateContent" in model.get("supportedGenerationMethods", []):
                     name = model.get("name")
-                    logger.warning("Không tìm thấy Flash, dùng model thay thế: %s", name)
-                    return name
+                    logger.warning("Không thấy dòng Flash, sử dụng model thay thế: %s", name)
+                    CACHED_MODEL_NAME = name
+                    return CACHED_MODEL_NAME
                     
     except Exception as e:
-        logger.error("Lỗi khi tự động quét model: %s", e)
+        logger.error("Lỗi trong quá trình tự động đồng bộ danh sách model: %s", e)
     
-    # Mặc định an toàn nếu quá trình quét bị lỗi
-    return "models/gemini-1.5-flash"
+    # Phương án dự phòng mặc định nếu quá trình kết nối mạng bị gián đoạn
+    return "models/gemini-2.5-flash"
 
 
 def call_gemini(api_key: str, image_b64: str, mime_type: str) -> str:
     """
-    Gọi Gemini qua REST API. Tự động lấy cấu hình model khả dụng nhất.
+    Gọi Gemini qua REST API siêu tốc.
     Nhận mime_type động để xử lý đúng PNG/JPEG/WebP từ camera.
     Ném RuntimeError nếu API trả về lỗi.
     """
-    # --- TỰ ĐỘNG LẤY TÊN MODEL ---
+    # Lấy tên model từ bộ nhớ cache siêu tốc
     model_name = get_best_model(api_key)
     
-    # --- TỰ ĐỘNG TẠO ĐƯỜNG DẪN KẾT NỐI ---
+    # Tạo đường dẫn động tương thích tuyệt đối
     dynamic_url = f"https://generativelanguage.googleapis.com/v1beta/{model_name}:generateContent"
 
     payload = {
@@ -132,7 +141,7 @@ def call_gemini(api_key: str, image_b64: str, mime_type: str) -> str:
                 {"text": GEMINI_PROMPT},
                 {
                     "inline_data": {
-                        "mime_type": mime_type,  # ← động, không hardcode
+                        "mime_type": mime_type,
                         "data": image_b64,
                     }
                 },
@@ -145,18 +154,16 @@ def call_gemini(api_key: str, image_b64: str, mime_type: str) -> str:
         headers={"Content-Type": "application/json"},
         params={"key": api_key},
         json=payload,
-        timeout=30,
+        timeout=15,  # Thời gian chờ tối đa 15 giây để tránh lỗi nghẽn cổng kết nối Render
     )
 
     resp_json = resp.json()
 
-    # Log chi tiết để dễ debug nếu còn lỗi
     if resp.status_code != 200 or "candidates" not in resp_json:
         logger.error(
-            "Gemini API lỗi — status: %s | URL: %s | mime: %s | response: %s",
+            "Gemini API lỗi — status: %s | URL: %s | response: %s",
             resp.status_code,
             dynamic_url,
-            mime_type,
             resp.text[:500],
         )
         raise RuntimeError("Gemini API không phản hồi hợp lệ.")
