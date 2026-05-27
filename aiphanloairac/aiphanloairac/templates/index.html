@@ -1,0 +1,135 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Phân Loại Rác Xanh - Dự Thi Sáng Tạo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f1f8f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .main-card {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            border: none;
+        }
+
+        #video {
+            width: 100%;
+            max-width: 450px;
+            border-radius: 15px;
+            border: 4px solid #28a745;
+            background-color: #000;
+        }
+
+        .btn-scan {
+            background: linear-gradient(135deg, #28a745, #218838);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            transition: 0.3s;
+        }
+
+            .btn-scan:hover {
+                transform: scale(1.02);
+                color: white;
+            }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="text-center mb-4">
+            <h1 class="text-success fw-bold">♻️ HỆ THỐNG PHÂN LOẠI RÁC AI</h1>
+            <p class="text-secondary">Sản phẩm công nghệ số ứng dụng thực tiễn học đường</p>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-12">
+                <div class="main-card p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-success">Mã số học sinh / Họ tên lớp:</label>
+                        <input type="text" id="username" class="form-control form-control-lg" value="HS_NguyenVanA_10A1" placeholder="Nhập tên để tích điểm thi đua...">
+                    </div>
+
+                    <div class="text-center mb-3">
+                        <video id="video" autoplay playsinline></video>
+                        <canvas id="canvas" style="display:none;"></canvas>
+                    </div>
+
+                    <button id="btn-scan" class="btn btn-scan btn-lg w-100 fw-bold py-3">📸 BẤM CHỤP QUÉT RÁC THẢI</button>
+
+                    <div id="result-box" class="alert alert-success d-none mt-4 p-3 border-start border-4 border-success">
+                        <h4 class="alert-heading fw-bold text-success" id="res-loai">Đang phân tích...</h4>
+                        <p class="mb-2 text-dark fs-5" id="res-huongdan"></p>
+                        <hr>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-primary fs-5">🎉 Cộng điểm: +<span id="res-diem">0</span></span>
+                            <span class="badge bg-success p-2 fs-6">🏆 Tổng quỹ điểm: <span id="res-tongdiem">0</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const btnScan = document.getElementById('btn-scan');
+        const usernameInput = document.getElementById('username');
+
+        // Yêu cầu bật camera sau (môi trường) của điện thoại
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => {
+                // Nếu không có camera sau (như máy tính bàn), bật camera mặc định
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => { video.srcObject = stream; })
+                    .catch(e => { alert("Không thể truy cập hệ thống camera của thiết bị!"); });
+            });
+
+        btnScan.addEventListener('click', async () => {
+            btnScan.innerText = "⏳ AI ĐANG PHÂN TÍCH ẢNH...";
+            btnScan.disabled = true;
+
+            // Đóng băng khung hình chụp ảnh đưa vào canvas
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const base64Image = canvas.toDataURL('image/jpeg');
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64Image, username: usernameInput.value })
+                });
+                const result = await response.json();
+
+                if(result.success) {
+                    document.getElementById('result-box').classList.remove('d-none');
+                    document.getElementById('res-loai').innerText = "📍 ĐỒ VẬT: " + result.loai_rac.toUpperCase();
+                    document.getElementById('res-huongdan').innerText = "💡 GIẢI PHÁP: " + result.huong_dan;
+                    document.getElementById('res-diem').innerText = result.diem_cong;
+                    document.getElementById('res-tongdiem').innerText = result.tong_diem;
+
+                    // Cuộn màn hình xuống vùng kết quả để dễ nhìn trên điện thoại
+                    document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert("Hệ thống AI bận: " + result.error);
+                }
+            } catch (error) {
+                alert("Lỗi kết nối mạng đến máy chủ!");
+            }
+
+            btnScan.innerText = "📸 BẤM CHỤP QUÉT RÁC THẢI";
+            btnScan.disabled = false;
+        });
+    </script>
+</body>
+</html>
