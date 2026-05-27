@@ -42,10 +42,8 @@ else:
 # HẰNG SỐ
 # ============================================================
 
-GEMINI_URL = (
-    "https://generativelanguage.googleapis.com"
-    "/v1beta/models/gemini-1.5-flash:generateContent"
-)
+# Đã xóa GEMINI_URL ở đây để hệ thống tự động quét đường dẫn
+
 GEMINI_PROMPT = (
     "Bạn là một chuyên gia phân loại rác thông minh. "
     "Hãy nhìn vào bức ảnh này và thực hiện nhiệm vụ sau:\n"
@@ -82,12 +80,52 @@ def extract_base64(image_data: str) -> tuple[str, str]:
     return image_data, mime_type
 
 
+def get_best_model(api_key: str) -> str:
+    """
+    Tự động gọi API của Google để lấy danh sách các model khả dụng cho tài khoản.
+    Tự động lọc và trả về tên model dòng 'flash' hỗ trợ 'generateContent'.
+    """
+    url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+    try:
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            available_models = data.get("models", [])
+            
+            # Ưu tiên 1: Tìm model có chữ 'flash' và hỗ trợ 'generateContent'
+            for model in available_models:
+                name = model.get("name", "")
+                methods = model.get("supportedGenerationMethods", [])
+                if "generateContent" in methods and "flash" in name:
+                    logger.info("Đã tự động tìm thấy model tối ưu: %s", name)
+                    return name
+            
+            # Ưu tiên 2: Nếu không có flash, lấy model bất kỳ hỗ trợ generateContent
+            for model in available_models:
+                if "generateContent" in model.get("supportedGenerationMethods", []):
+                    name = model.get("name")
+                    logger.warning("Không tìm thấy Flash, dùng model thay thế: %s", name)
+                    return name
+                    
+    except Exception as e:
+        logger.error("Lỗi khi tự động quét model: %s", e)
+    
+    # Mặc định an toàn nếu quá trình quét bị lỗi
+    return "models/gemini-1.5-flash"
+
+
 def call_gemini(api_key: str, image_b64: str, mime_type: str) -> str:
     """
-    Gọi Gemini 1.5 Flash qua REST API với ảnh Base64.
+    Gọi Gemini qua REST API. Tự động lấy cấu hình model khả dụng nhất.
     Nhận mime_type động để xử lý đúng PNG/JPEG/WebP từ camera.
     Ném RuntimeError nếu API trả về lỗi.
     """
+    # --- TỰ ĐỘNG LẤY TÊN MODEL ---
+    model_name = get_best_model(api_key)
+    
+    # --- TỰ ĐỘNG TẠO ĐƯỜNG DẪN KẾT NỐI ---
+    dynamic_url = f"https://generativelanguage.googleapis.com/v1beta/{model_name}:generateContent"
+
     payload = {
         "contents": [{
             "parts": [
@@ -103,7 +141,7 @@ def call_gemini(api_key: str, image_b64: str, mime_type: str) -> str:
     }
 
     resp = requests.post(
-        GEMINI_URL,
+        dynamic_url,
         headers={"Content-Type": "application/json"},
         params={"key": api_key},
         json=payload,
@@ -115,8 +153,9 @@ def call_gemini(api_key: str, image_b64: str, mime_type: str) -> str:
     # Log chi tiết để dễ debug nếu còn lỗi
     if resp.status_code != 200 or "candidates" not in resp_json:
         logger.error(
-            "Gemini API lỗi — status: %s | mime: %s | response: %s",
+            "Gemini API lỗi — status: %s | URL: %s | mime: %s | response: %s",
             resp.status_code,
+            dynamic_url,
             mime_type,
             resp.text[:500],
         )
