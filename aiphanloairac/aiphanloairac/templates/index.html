@@ -3,111 +3,424 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Phân Loại Rác Xanh - Dự Thi Sáng Tạo</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>AI Phân Loại Rác Xanh</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        body {
-            background-color: #f1f8f5;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        :root {
+            --g1: #0d2b1a;
+            --g2: #0a3d20;
+            --g3: #0f5132;
+            --lime: #39d353;
+            --lime2: #5eff7e;
+            --teal: #00e5c0;
+            --accent: #b8ff65;
+            --glass: rgba(255,255,255,0.06);
+            --glass-border: rgba(57,211,83,0.25);
+            --card-shadow: 0 24px 64px rgba(0,0,0,0.45);
+            --text: #e8f5e9;
+            --muted: rgba(232,245,233,0.55);
+            --r: 22px;
         }
 
-        .main-card {
-            background: #ffffff;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-            border: none;
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-height: 100vh;
+            background: radial-gradient(ellipse at 20% 0%, #143d22 0%, #07180e 55%, #020c06 100%);
+            font-family: 'Nunito', sans-serif;
+            color: var(--text);
+            overflow-x: hidden;
         }
+
+        /* ── Particle dots background ── */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                radial-gradient(circle, rgba(57,211,83,0.18) 1px, transparent 1px),
+                radial-gradient(circle, rgba(0,229,192,0.10) 1px, transparent 1px);
+            background-size: 44px 44px, 80px 80px;
+            background-position: 0 0, 22px 22px;
+            pointer-events: none; z-index: 0;
+            animation: bgdrift 22s linear infinite;
+        }
+        @keyframes bgdrift { to { background-position: 44px 44px, 66px 66px; } }
+
+        /* ── Decorative glowing orbs ── */
+        .orb {
+            position: fixed; border-radius: 50%;
+            filter: blur(80px); pointer-events: none; z-index: 0;
+        }
+        .orb-1 { width: 350px; height: 350px; background: radial-gradient(circle, rgba(57,211,83,0.22), transparent); top: -80px; left: -60px; animation: orbfloat 9s ease-in-out infinite; }
+        .orb-2 { width: 280px; height: 280px; background: radial-gradient(circle, rgba(0,229,192,0.16), transparent); bottom: 5%; right: -50px; animation: orbfloat 12s ease-in-out infinite reverse; }
+        @keyframes orbfloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-28px)} }
+
+        .wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 24px 16px 48px; }
+
+        /* ── Header ── */
+        .hero { text-align: center; margin-bottom: 28px; animation: fadedown 0.7s ease both; }
+        @keyframes fadedown { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:translateY(0)} }
+
+        .logo-ring {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 72px; height: 72px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--lime), var(--teal));
+            box-shadow: 0 0 0 6px rgba(57,211,83,0.18), 0 0 32px rgba(57,211,83,0.35);
+            margin-bottom: 14px;
+            animation: logopulse 3s ease-in-out infinite;
+        }
+        @keyframes logopulse {
+            0%,100%{box-shadow:0 0 0 6px rgba(57,211,83,0.18),0 0 32px rgba(57,211,83,0.35)}
+            50%{box-shadow:0 0 0 12px rgba(57,211,83,0.10),0 0 56px rgba(57,211,83,0.50)}
+        }
+        .logo-ring i { font-size: 30px; color: #07180e; }
+
+        .hero h1 {
+            font-size: clamp(1.45rem, 5vw, 1.85rem);
+            font-weight: 900; letter-spacing: -0.5px;
+            background: linear-gradient(100deg, var(--lime2), var(--teal), var(--accent));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; line-height: 1.2;
+        }
+        .hero p { color: var(--muted); font-size: 0.88rem; margin-top: 6px; font-weight: 600; letter-spacing: 0.5px; }
+
+        /* ── Glass card ── */
+        .glass-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--r);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: var(--card-shadow);
+            padding: 24px 20px;
+            animation: risein 0.7s 0.2s ease both;
+        }
+        @keyframes risein { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+        /* ── Input ── */
+        .field-label {
+            font-size: 0.78rem; font-weight: 800; letter-spacing: 1px;
+            text-transform: uppercase; color: var(--lime); margin-bottom: 8px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .field-label i { font-size: 0.85rem; }
+
+        #username {
+            width: 100%; background: rgba(0,0,0,0.35);
+            border: 1.5px solid rgba(57,211,83,0.2);
+            border-radius: 12px; padding: 13px 16px;
+            color: var(--text); font-family: 'Nunito', sans-serif;
+            font-size: 0.95rem; font-weight: 700;
+            transition: border-color 0.25s, box-shadow 0.25s;
+            outline: none;
+        }
+        #username:focus {
+            border-color: var(--lime);
+            box-shadow: 0 0 0 3px rgba(57,211,83,0.15);
+        }
+        #username::placeholder { color: rgba(232,245,233,0.3); font-weight: 600; }
+
+        /* ── Divider ── */
+        .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-border), transparent); margin: 20px 0; }
+
+        /* ── Camera frame ── */
+        .cam-wrap {
+            position: relative;
+            border-radius: 18px; overflow: hidden;
+            border: 2px solid rgba(57,211,83,0.3);
+            box-shadow: 0 0 0 1px rgba(57,211,83,0.1), 0 12px 40px rgba(0,0,0,0.4);
+            background: #000;
+        }
+
+        /* Corner accents */
+        .cam-wrap::before, .cam-wrap::after {
+            content: ''; position: absolute; width: 22px; height: 22px; z-index: 10;
+            border-color: var(--lime); border-style: solid;
+        }
+        .cam-wrap::before { top: 8px; left: 8px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+        .cam-wrap::after  { bottom: 8px; right: 8px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+        .cam-corner-tr, .cam-corner-bl {
+            position: absolute; width: 22px; height: 22px; z-index: 10;
+            border-color: var(--lime); border-style: solid;
+        }
+        .cam-corner-tr { top: 8px; right: 8px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+        .cam-corner-bl { bottom: 8px; left: 8px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
 
         #video {
-            width: 100%;
-            max-width: 450px;
-            border-radius: 15px;
-            border: 4px solid #28a745;
-            background-color: #000;
+            width: 100%; display: block;
+            border-radius: 16px;
+            min-height: 240px; object-fit: cover;
         }
 
+        /* Scanning laser line */
+        .scan-line {
+            position: absolute; left: 0; right: 0; height: 2px; top: 0; z-index: 8;
+            background: linear-gradient(90deg, transparent, var(--lime), var(--teal), var(--lime), transparent);
+            opacity: 0; pointer-events: none;
+            box-shadow: 0 0 12px var(--lime), 0 0 24px rgba(57,211,83,0.5);
+        }
+        .scanning .scan-line {
+            opacity: 1;
+            animation: scanmove 1.4s linear infinite;
+        }
+        @keyframes scanmove {
+            0%   { top: 0%; }
+            100% { top: 100%; }
+        }
+
+        /* Scanning border pulse */
+        .scanning .cam-wrap {
+            border-color: var(--lime);
+            animation: borderpulse 0.8s ease-in-out infinite alternate;
+        }
+        @keyframes borderpulse {
+            from { box-shadow: 0 0 0 1px rgba(57,211,83,0.2), 0 0 18px rgba(57,211,83,0.3); }
+            to   { box-shadow: 0 0 0 3px rgba(57,211,83,0.5), 0 0 40px rgba(57,211,83,0.6); }
+        }
+
+        /* Scan overlay tint */
+        .scan-overlay {
+            position: absolute; inset: 0; border-radius: 16px;
+            background: rgba(57,211,83,0.04); z-index: 7;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .scanning .scan-overlay { opacity: 1; }
+
+        canvas { display: none; }
+
+        /* ── Scan button ── */
         .btn-scan {
-            background: linear-gradient(135deg, #28a745, #218838);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            transition: 0.3s;
+            margin-top: 18px; width: 100%; border: none; cursor: pointer;
+            border-radius: 14px; padding: 17px 20px;
+            background: linear-gradient(135deg, #1db954, #0ea84f, #0b9943);
+            color: #fff; font-family: 'Nunito', sans-serif;
+            font-size: 1.05rem; font-weight: 900; letter-spacing: 0.3px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            box-shadow: 0 6px 24px rgba(29,185,84,0.4), 0 2px 8px rgba(0,0,0,0.3);
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            animation: breathe 2.8s ease-in-out infinite;
+            position: relative; overflow: hidden;
+        }
+        @keyframes breathe {
+            0%,100%{box-shadow:0 6px 24px rgba(29,185,84,0.4),0 2px 8px rgba(0,0,0,0.3)}
+            50%{box-shadow:0 8px 36px rgba(29,185,84,0.65),0 4px 16px rgba(0,0,0,0.35),0 0 0 6px rgba(29,185,84,0.12)}
+        }
+        .btn-scan::after {
+            content:''; position:absolute; inset:0;
+            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.12) 50%, transparent 70%);
+            transform: translateX(-100%);
+        }
+        .btn-scan:hover:not(:disabled)::after { animation: shimmer 0.6s ease forwards; }
+        @keyframes shimmer { to{transform:translateX(200%)} }
+        .btn-scan:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 36px rgba(29,185,84,0.55); animation: none; }
+        .btn-scan:active:not(:disabled) { transform: translateY(0); }
+        .btn-scan:disabled { opacity: 0.7; cursor: not-allowed; animation: none; }
+        .btn-scan i { font-size: 1.15rem; }
+
+        /* ── Result box ── */
+        #result-box {
+            margin-top: 22px;
+            background: linear-gradient(145deg, rgba(14,60,28,0.85), rgba(5,28,13,0.9));
+            border: 1.5px solid rgba(57,211,83,0.4);
+            border-radius: var(--r);
+            padding: 22px 18px;
+            display: none;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 0 0 1px rgba(57,211,83,0.08), 0 20px 48px rgba(0,0,0,0.5),
+                        0 0 40px rgba(57,211,83,0.08);
+        }
+        #result-box.visible {
+            display: block;
+            animation: bounceup 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        @keyframes bounceup {
+            from{opacity:0;transform:translateY(30px) scale(0.96)}
+            to{opacity:1;transform:translateY(0) scale(1)}
         }
 
-        .btn-scan:hover {
-            transform: scale(1.02);
-            color: white;
+        /* Glow pulse on reveal */
+        #result-box.visible {
+            animation: bounceup 0.55s cubic-bezier(0.34,1.56,0.64,1) both,
+                       resultglow 1.2s 0.5s ease-out both;
         }
-        
-        /* Chỉnh lại font chữ kết quả cho đẹp */
+        @keyframes resultglow {
+            from{box-shadow:0 0 0 1px rgba(57,211,83,0.08),0 20px 48px rgba(0,0,0,0.5),0 0 60px rgba(57,211,83,0.35)}
+            to{box-shadow:0 0 0 1px rgba(57,211,83,0.08),0 20px 48px rgba(0,0,0,0.5),0 0 40px rgba(57,211,83,0.08)}
+        }
+
+        .res-header {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+        }
+        .res-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--lime), var(--teal));
+            flex-shrink: 0;
+        }
+        .res-badge i { color: #07180e; font-size: 1rem; }
+
+        #res-loai {
+            font-size: 1rem; font-weight: 900; color: var(--lime2);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        .res-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(57,211,83,0.3), transparent);
+            margin: 14px 0;
+        }
+
         #res-huongdan {
-            font-size: 1.1rem;
-            line-height: 1.6;
-            color: #333;
+            font-size: 0.97rem; line-height: 1.75;
+            color: rgba(232,245,233,0.88); font-weight: 600;
         }
+
+        /* ── Score badges ── */
+        .score-row {
+            display: flex; gap: 12px; margin-top: 18px;
+        }
+        .score-chip {
+            flex: 1; border-radius: 14px; padding: 14px 12px;
+            text-align: center; position: relative; overflow: hidden;
+        }
+        .score-chip-plus {
+            background: linear-gradient(135deg, rgba(57,211,83,0.2), rgba(57,211,83,0.08));
+            border: 1.5px solid rgba(57,211,83,0.35);
+        }
+        .score-chip-total {
+            background: linear-gradient(135deg, rgba(0,229,192,0.18), rgba(0,229,192,0.06));
+            border: 1.5px solid rgba(0,229,192,0.35);
+        }
+        .chip-label {
+            font-size: 0.7rem; font-weight: 800; letter-spacing: 1px;
+            text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+        }
+        .chip-val {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.75rem; font-weight: 700; line-height: 1;
+        }
+        .score-chip-plus .chip-val { color: var(--lime2); }
+        .score-chip-total .chip-val { color: var(--teal); }
+        .chip-icon {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            font-size: 1.6rem; opacity: 0.12;
+        }
+
+        /* ── Scanning state on whole card ── */
+        .scanning #btn-scan { animation: none !important; }
+
+        /* ── Footer bar ── */
+        .footer-bar {
+            text-align: center; margin-top: 28px;
+            font-size: 0.75rem; color: var(--muted); font-weight: 600; letter-spacing: 0.3px;
+            animation: risein 0.7s 0.5s ease both;
+        }
+        .footer-bar span { color: var(--lime); }
     </style>
 </head>
 <body>
-    <div class="container py-5">
-        <div class="text-center mb-4">
-            <h1 class="text-success fw-bold">♻️ HỆ THỐNG PHÂN LOẠI RÁC AI</h1>
-            <p class="text-secondary">Sản phẩm công nghệ số ứng dụng thực tiễn học đường</p>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="wrapper">
+
+        <!-- Hero -->
+        <div class="hero">
+            <div class="logo-ring"><i class="fa-solid fa-leaf"></i></div>
+            <h1>HỆ THỐNG PHÂN LOẠI<br>RÁC THẢI AI</h1>
+            <p><i class="fa-solid fa-circle-nodes"></i>&nbsp; Sản phẩm công nghệ số học đường</p>
         </div>
 
-        <div class="row justify-content-center">
-            <div class="col-md-6 col-12">
-                <div class="main-card p-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-success">Mã số học sinh / Họ tên lớp:</label>
-                        <input type="text" id="username" class="form-control form-control-lg" value="HS_NguyenVanA_10A1" placeholder="Nhập tên để tích điểm thi đua...">
+        <!-- Main card -->
+        <div class="glass-card" id="main-card">
+
+            <!-- Username -->
+            <div class="mb-4">
+                <div class="field-label"><i class="fa-solid fa-id-badge"></i> Mã học sinh / Họ tên lớp</div>
+                <input type="text" id="username" value="HS_NguyenVanA_10A1" placeholder="Nhập tên để tích điểm thi đua...">
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Camera -->
+            <div class="cam-wrap" id="cam-wrap">
+                <div class="cam-corner-tr"></div>
+                <div class="cam-corner-bl"></div>
+                <div class="scan-overlay"></div>
+                <div class="scan-line"></div>
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <!-- Scan button -->
+            <button class="btn-scan" id="btn-scan">
+                <i class="fa-solid fa-camera-retro" id="btn-icon"></i>
+                <span id="btn-text">BẤM CHỤP QUÉT RÁC THẢI</span>
+            </button>
+
+            <!-- Result box -->
+            <div id="result-box">
+                <div class="res-header">
+                    <div class="res-badge"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <div id="res-loai">KẾT QUẢ PHÂN LOẠI AI</div>
+                </div>
+                <div class="res-divider"></div>
+                <div id="res-huongdan">Đang phân tích...</div>
+                <div class="score-row">
+                    <div class="score-chip score-chip-plus">
+                        <div class="chip-label"><i class="fa-solid fa-bolt"></i> Vừa cộng</div>
+                        <div class="chip-val">+<span id="res-diem">0</span></div>
+                        <i class="fa-solid fa-star chip-icon"></i>
                     </div>
-
-                    <div class="text-center mb-3">
-                        <video id="video" autoplay playsinline></video>
-                        <canvas id="canvas" style="display:none;"></canvas>
-                    </div>
-
-                    <button id="btn-scan" class="btn btn-scan btn-lg w-100 fw-bold py-3">📸 BẤM CHỤP QUÉT RÁC THẢI</button>
-
-                    <div id="result-box" class="alert alert-success d-none mt-4 p-3 border-start border-4 border-success">
-                        <h4 class="alert-heading fw-bold text-success" id="res-loai">📍 KẾT QUẢ TỪ AI:</h4>
-                        <div class="mb-3 mt-3" id="res-huongdan">Đang phân tích...</div>
-                        <hr>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-primary fs-5">🎉 Cộng điểm: +<span id="res-diem">0</span></span>
-                            <span class="badge bg-success p-2 fs-6">🏆 Tổng quỹ điểm: <span id="res-tongdiem">0</span></span>
-                        </div>
+                    <div class="score-chip score-chip-total">
+                        <div class="chip-label"><i class="fa-solid fa-trophy"></i> Tổng điểm</div>
+                        <div class="chip-val"><span id="res-tongdiem">0</span></div>
+                        <i class="fa-solid fa-crown chip-icon"></i>
                     </div>
                 </div>
             </div>
+
+        </div><!-- /glass-card -->
+
+        <div class="footer-bar">
+            Powered by <span>Google Gemini AI</span> &nbsp;·&nbsp; Dự thi Sáng Tạo Công Nghệ <span>2026</span>
         </div>
-    </div>
+
+    </div><!-- /wrapper -->
 
     <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const btnScan = document.getElementById('btn-scan');
+        const video      = document.getElementById('video');
+        const canvas     = document.getElementById('canvas');
+        const btnScan    = document.getElementById('btn-scan');
         const usernameInput = document.getElementById('username');
+        const mainCard   = document.getElementById('main-card');
+        const camWrap    = document.getElementById('cam-wrap');
+        const btnIcon    = document.getElementById('btn-icon');
+        const btnText    = document.getElementById('btn-text');
 
-        // Yêu cầu bật camera sau (môi trường) của điện thoại
+        // ── Camera init ──
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(stream => { video.srcObject = stream; })
-            .catch(err => {
-                // Nếu không có camera sau (như máy tính bàn), bật camera mặc định
+            .catch(() => {
                 navigator.mediaDevices.getUserMedia({ video: true })
                     .then(stream => { video.srcObject = stream; })
-                    .catch(e => { alert("Không thể truy cập hệ thống camera của thiết bị!"); });
+                    .catch(() => { alert("Không thể truy cập camera của thiết bị!"); });
             });
 
+        // ── Scan ──
         btnScan.addEventListener('click', async () => {
-            btnScan.innerText = "⏳ AI ĐANG PHÂN TÍCH ẢNH...";
+            // Scanning UI state
             btnScan.disabled = true;
+            btnIcon.className = 'fa-solid fa-spinner fa-spin';
+            btnText.textContent = 'AI ĐANG PHÂN TÍCH ẢNH...';
+            mainCard.classList.add('scanning');
 
-            // Đóng băng khung hình chụp ảnh đưa vào canvas
-            canvas.width = video.videoWidth;
+            // Capture frame
+            canvas.width  = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
             const base64Image = canvas.toDataURL('image/jpeg');
 
             try {
@@ -116,25 +429,26 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ image: base64Image, username: usernameInput.value })
                 });
-                
+
                 const result = await response.json();
 
-                if(result.success) {
-                    document.getElementById('result-box').classList.remove('d-none');
-                    
-                    // Lấy biến prediction từ Backend và chuyển dấu xuống dòng (\n) thành thẻ <br>
+                if (result.success) {
+                    const resultBox = document.getElementById('result-box');
+                    resultBox.classList.remove('visible');
+                    // Force reflow so animation replays
+                    void resultBox.offsetWidth;
+
                     const aiText = result.prediction.replace(/\n/g, '<br>');
                     document.getElementById('res-huongdan').innerHTML = aiText;
-                    
-                    // Mô phỏng hệ thống cộng điểm
+
                     const diemCong = 10;
                     document.getElementById('res-diem').innerText = diemCong;
-                    
-                    let tongDiemHienTai = parseInt(document.getElementById('res-tongdiem').innerText) || 0;
-                    document.getElementById('res-tongdiem').innerText = tongDiemHienTai + diemCong;
+                    let prev = parseInt(document.getElementById('res-tongdiem').innerText) || 0;
+                    document.getElementById('res-tongdiem').innerText = prev + diemCong;
 
-                    // Cuộn màn hình xuống vùng kết quả để dễ nhìn trên điện thoại
-                    document.getElementById('result-box').scrollIntoView({ behavior: 'smooth' });
+                    resultBox.style.display = 'block';
+                    resultBox.classList.add('visible');
+                    resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 } else {
                     alert("Hệ thống AI bận: " + result.error);
                 }
@@ -143,8 +457,11 @@
                 alert("Đã xảy ra lỗi trong quá trình xử lý giao diện!");
             }
 
-            btnScan.innerText = "📸 BẤM CHỤP QUÉT RÁC THẢI";
+            // Reset UI
+            mainCard.classList.remove('scanning');
             btnScan.disabled = false;
+            btnIcon.className = 'fa-solid fa-camera-retro';
+            btnText.textContent = 'BẤM CHỤP QUÉT RÁC THẢI';
         });
     </script>
 </body>
