@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Phân Loại Rác Xanh</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -31,6 +31,8 @@
             font-family: 'Nunito', sans-serif;
             color: var(--text);
             overflow-x: hidden;
+            /* Chống cuộn ngang trên mobile */
+            width: 100%;
         }
 
         /* ── Particle dots background ── */
@@ -56,34 +58,35 @@
         .orb-2 { width: 280px; height: 280px; background: radial-gradient(circle, rgba(0,229,192,0.16), transparent); bottom: 5%; right: -50px; animation: orbfloat 12s ease-in-out infinite reverse; }
         @keyframes orbfloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-28px)} }
 
-        .wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 24px 16px 48px; }
+        /* Tối ưu hiển thị vùng đệm cho điện thoại */
+        .wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 20px 14px 40px; }
 
         /* ── Header ── */
-        .hero { text-align: center; margin-bottom: 28px; animation: fadedown 0.7s ease both; }
+        .hero { text-align: center; margin-bottom: 24px; animation: fadedown 0.7s ease both; }
         @keyframes fadedown { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:translateY(0)} }
 
         .logo-ring {
             display: inline-flex; align-items: center; justify-content: center;
-            width: 72px; height: 72px; border-radius: 50%;
+            width: 64px; height: 64px; border-radius: 50%;
             background: linear-gradient(135deg, var(--lime), var(--teal));
             box-shadow: 0 0 0 6px rgba(57,211,83,0.18), 0 0 32px rgba(57,211,83,0.35);
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             animation: logopulse 3s ease-in-out infinite;
         }
         @keyframes logopulse {
             0%,100%{box-shadow:0 0 0 6px rgba(57,211,83,0.18),0 0 32px rgba(57,211,83,0.35)}
             50%{box-shadow:0 0 0 12px rgba(57,211,83,0.10),0 0 56px rgba(57,211,83,0.50)}
         }
-        .logo-ring i { font-size: 30px; color: #07180e; }
+        .logo-ring i { font-size: 26px; color: #07180e; }
 
         .hero h1 {
-            font-size: clamp(1.45rem, 5vw, 1.85rem);
+            font-size: clamp(1.3rem, 5vw, 1.85rem);
             font-weight: 900; letter-spacing: -0.5px;
             background: linear-gradient(100deg, var(--lime2), var(--teal), var(--accent));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text; line-height: 1.2;
         }
-        .hero p { color: var(--muted); font-size: 0.88rem; margin-top: 6px; font-weight: 600; letter-spacing: 0.5px; }
+        .hero p { color: var(--muted); font-size: 0.85rem; margin-top: 6px; font-weight: 600; letter-spacing: 0.5px; }
 
         /* ── Glass card ── */
         .glass-card {
@@ -93,23 +96,22 @@
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             box-shadow: var(--card-shadow);
-            padding: 24px 20px;
+            padding: 20px 16px;
             animation: risein 0.7s 0.2s ease both;
         }
         @keyframes risein { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
 
         /* ── Input ── */
         .field-label {
-            font-size: 0.78rem; font-weight: 800; letter-spacing: 1px;
+            font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;
             text-transform: uppercase; color: var(--lime); margin-bottom: 8px;
             display: flex; align-items: center; gap: 6px;
         }
-        .field-label i { font-size: 0.85rem; }
 
         #username {
             width: 100%; background: rgba(0,0,0,0.35);
             border: 1.5px solid rgba(57,211,83,0.2);
-            border-radius: 12px; padding: 13px 16px;
+            border-radius: 12px; padding: 12px 14px;
             color: var(--text); font-family: 'Nunito', sans-serif;
             font-size: 0.95rem; font-weight: 700;
             transition: border-color 0.25s, box-shadow 0.25s;
@@ -122,7 +124,7 @@
         #username::placeholder { color: rgba(232,245,233,0.3); font-weight: 600; }
 
         /* ── Divider ── */
-        .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-border), transparent); margin: 20px 0; }
+        .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-border), transparent); margin: 18px 0; }
 
         /* ── Camera frame ── */
         .cam-wrap {
@@ -148,11 +150,14 @@
         .cam-corner-tr { top: 8px; right: 8px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
         .cam-corner-bl { bottom: 8px; left: 8px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
 
-        #video {
+        /* Tối ưu Canvas và Video để hiển thị khớp nhau tuyệt đối trên Mobile */
+        #video, #canvas {
             width: 100%; display: block;
             border-radius: 16px;
-            min-height: 240px; object-fit: cover;
+            min-height: 280px; max-height: 60vh;
+            object-fit: cover;
         }
+        #canvas { display: none; } /* Ẩn canvas mặc định */
 
         /* Scanning laser line */
         .scan-line {
@@ -188,18 +193,16 @@
         }
         .scanning .scan-overlay { opacity: 1; }
 
-        canvas { display: none; }
-
         /* ── Scan button ── */
         .btn-scan {
             margin-top: 18px; width: 100%; border: none; cursor: pointer;
-            border-radius: 14px; padding: 17px 20px;
+            border-radius: 14px; padding: 15px 16px;
             background: linear-gradient(135deg, #1db954, #0ea84f, #0b9943);
             color: #fff; font-family: 'Nunito', sans-serif;
             font-size: 1.05rem; font-weight: 900; letter-spacing: 0.3px;
             display: flex; align-items: center; justify-content: center; gap: 10px;
             box-shadow: 0 6px 24px rgba(29,185,84,0.4), 0 2px 8px rgba(0,0,0,0.3);
-            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
             animation: breathe 2.8s ease-in-out infinite;
             position: relative; overflow: hidden;
         }
@@ -214,18 +217,23 @@
         }
         .btn-scan:hover:not(:disabled)::after { animation: shimmer 0.6s ease forwards; }
         @keyframes shimmer { to{transform:translateX(200%)} }
-        .btn-scan:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 36px rgba(29,185,84,0.55); animation: none; }
+        
         .btn-scan:active:not(:disabled) { transform: translateY(0); }
         .btn-scan:disabled { opacity: 0.7; cursor: not-allowed; animation: none; }
-        .btn-scan i { font-size: 1.15rem; }
+        
+        /* Hiệu ứng khi đổi sang nút Quét Lại */
+        .btn-scan.btn-reset {
+            background: linear-gradient(135deg, #0ea84f, #05612c);
+            animation: none;
+        }
 
         /* ── Result box ── */
         #result-box {
-            margin-top: 22px;
+            margin-top: 18px;
             background: linear-gradient(145deg, rgba(14,60,28,0.85), rgba(5,28,13,0.9));
             border: 1.5px solid rgba(57,211,83,0.4);
             border-radius: var(--r);
-            padding: 22px 18px;
+            padding: 20px 16px;
             display: none;
             backdrop-filter: blur(16px);
             box-shadow: 0 0 0 1px rgba(57,211,83,0.08), 0 20px 48px rgba(0,0,0,0.5),
@@ -233,56 +241,47 @@
         }
         #result-box.visible {
             display: block;
-            animation: bounceup 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+            animation: bounceup 0.55s cubic-bezier(0.34,1.56,0.64,1) both,
+                       resultglow 1.2s 0.5s ease-out both;
         }
         @keyframes bounceup {
             from{opacity:0;transform:translateY(30px) scale(0.96)}
             to{opacity:1;transform:translateY(0) scale(1)}
-        }
-
-        /* Glow pulse on reveal */
-        #result-box.visible {
-            animation: bounceup 0.55s cubic-bezier(0.34,1.56,0.64,1) both,
-                       resultglow 1.2s 0.5s ease-out both;
         }
         @keyframes resultglow {
             from{box-shadow:0 0 0 1px rgba(57,211,83,0.08),0 20px 48px rgba(0,0,0,0.5),0 0 60px rgba(57,211,83,0.35)}
             to{box-shadow:0 0 0 1px rgba(57,211,83,0.08),0 20px 48px rgba(0,0,0,0.5),0 0 40px rgba(57,211,83,0.08)}
         }
 
-        .res-header {
-            display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
-        }
+        .res-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
         .res-badge {
             display: inline-flex; align-items: center; justify-content: center;
-            width: 40px; height: 40px; border-radius: 50%;
+            width: 36px; height: 36px; border-radius: 50%;
             background: linear-gradient(135deg, var(--lime), var(--teal));
             flex-shrink: 0;
         }
-        .res-badge i { color: #07180e; font-size: 1rem; }
+        .res-badge i { color: #07180e; font-size: 0.9rem; }
 
         #res-loai {
-            font-size: 1rem; font-weight: 900; color: var(--lime2);
+            font-size: 0.95rem; font-weight: 900; color: var(--lime2);
             text-transform: uppercase; letter-spacing: 0.5px;
         }
 
         .res-divider {
             height: 1px;
             background: linear-gradient(90deg, transparent, rgba(57,211,83,0.3), transparent);
-            margin: 14px 0;
+            margin: 12px 0;
         }
 
         #res-huongdan {
-            font-size: 0.97rem; line-height: 1.75;
+            font-size: 0.9rem; line-height: 1.6;
             color: rgba(232,245,233,0.88); font-weight: 600;
         }
 
         /* ── Score badges ── */
-        .score-row {
-            display: flex; gap: 12px; margin-top: 18px;
-        }
+        .score-row { display: flex; gap: 10px; margin-top: 16px; }
         .score-chip {
-            flex: 1; border-radius: 14px; padding: 14px 12px;
+            flex: 1; border-radius: 14px; padding: 12px 8px;
             text-align: center; position: relative; overflow: hidden;
         }
         .score-chip-plus {
@@ -294,18 +293,18 @@
             border: 1.5px solid rgba(0,229,192,0.35);
         }
         .chip-label {
-            font-size: 0.7rem; font-weight: 800; letter-spacing: 1px;
+            font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px;
             text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
         }
         .chip-val {
             font-family: 'Space Mono', monospace;
-            font-size: 1.75rem; font-weight: 700; line-height: 1;
+            font-size: 1.5rem; font-weight: 700; line-height: 1;
         }
         .score-chip-plus .chip-val { color: var(--lime2); }
         .score-chip-total .chip-val { color: var(--teal); }
         .chip-icon {
             position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-            font-size: 1.6rem; opacity: 0.12;
+            font-size: 1.4rem; opacity: 0.12;
         }
 
         /* ── Scanning state on whole card ── */
@@ -313,8 +312,8 @@
 
         /* ── Footer bar ── */
         .footer-bar {
-            text-align: center; margin-top: 28px;
-            font-size: 0.75rem; color: var(--muted); font-weight: 600; letter-spacing: 0.3px;
+            text-align: center; margin-top: 24px;
+            font-size: 0.7rem; color: var(--muted); font-weight: 600; letter-spacing: 0.3px;
             animation: risein 0.7s 0.5s ease both;
         }
         .footer-bar span { color: var(--lime); }
@@ -326,17 +325,14 @@
 
     <div class="wrapper">
 
-        <!-- Hero -->
         <div class="hero">
             <div class="logo-ring"><i class="fa-solid fa-leaf"></i></div>
             <h1>HỆ THỐNG PHÂN LOẠI<br>RÁC THẢI AI</h1>
             <p><i class="fa-solid fa-circle-nodes"></i>&nbsp; Sản phẩm công nghệ số học đường</p>
         </div>
 
-        <!-- Main card -->
         <div class="glass-card" id="main-card">
 
-            <!-- Username -->
             <div class="mb-4">
                 <div class="field-label"><i class="fa-solid fa-id-badge"></i> Mã học sinh / Họ tên lớp</div>
                 <input type="text" id="username" value="HS_NguyenVanA_10A1" placeholder="Nhập tên để tích điểm thi đua...">
@@ -344,7 +340,6 @@
 
             <div class="divider"></div>
 
-            <!-- Camera -->
             <div class="cam-wrap" id="cam-wrap">
                 <div class="cam-corner-tr"></div>
                 <div class="cam-corner-bl"></div>
@@ -354,13 +349,11 @@
                 <canvas id="canvas"></canvas>
             </div>
 
-            <!-- Scan button -->
             <button class="btn-scan" id="btn-scan">
                 <i class="fa-solid fa-camera-retro" id="btn-icon"></i>
                 <span id="btn-text">BẤM CHỤP QUÉT RÁC THẢI</span>
             </button>
 
-            <!-- Result box -->
             <div id="result-box">
                 <div class="res-header">
                     <div class="res-badge"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
@@ -382,15 +375,11 @@
                 </div>
             </div>
 
-        </div><!-- /glass-card -->
-
-        <div class="footer-bar">
+        </div><div class="footer-bar">
             Powered by <span>Google Gemini AI</span> &nbsp;·&nbsp; Dự thi Sáng Tạo Công Nghệ <span>2026</span>
         </div>
 
-    </div><!-- /wrapper -->
-
-    <script>
+    </div><script>
         const video      = document.getElementById('video');
         const canvas     = document.getElementById('canvas');
         const btnScan    = document.getElementById('btn-scan');
@@ -399,30 +388,84 @@
         const camWrap    = document.getElementById('cam-wrap');
         const btnIcon    = document.getElementById('btn-icon');
         const btnText    = document.getElementById('btn-text');
+        
+        let currentStream = null;
+        let isResultMode = false; // Biến trạng thái để biết đang ở màn hình nào
 
-        // ── Camera init ──
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(() => {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(stream => { video.srcObject = stream; })
-                    .catch(() => { alert("Không thể truy cập camera của thiết bị!"); });
-            });
+        // ── Hàm khởi động Camera ──
+        async function startCamera() {
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = currentStream;
+                
+                // Hiển thị lại video, ẩn canvas
+                video.style.display = 'block';
+                canvas.style.display = 'none';
+            } catch (error) {
+                console.error("Lỗi mở camera:", error);
+                // Fallback nếu không có camera sau
+                try {
+                    currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = currentStream;
+                    video.style.display = 'block';
+                    canvas.style.display = 'none';
+                } catch (fallbackError) {
+                    alert("Không thể truy cập camera của thiết bị!");
+                }
+            }
+        }
 
-        // ── Scan ──
+        // Tự động bật camera khi load trang
+        startCamera();
+
+        // ── Logic xử lý nút bấm ──
         btnScan.addEventListener('click', async () => {
-            // Scanning UI state
+            
+            // NẾU ĐANG Ở CHẾ ĐỘ KẾT QUẢ -> BẤM LÀ QUÉT LẠI MÓN MỚI
+            if (isResultMode) {
+                // Ẩn bảng kết quả
+                const resultBox = document.getElementById('result-box');
+                resultBox.classList.remove('visible');
+                resultBox.style.display = 'none';
+                
+                // Đưa giao diện về trạng thái chụp
+                btnScan.classList.remove('btn-reset');
+                btnIcon.className = 'fa-solid fa-camera-retro';
+                btnText.textContent = 'BẤM CHỤP QUÉT RÁC THẢI';
+                isResultMode = false;
+                
+                // Khởi động lại camera
+                await startCamera();
+                return;
+            }
+
+            // ==========================================
+            // NẾU ĐANG Ở CHẾ ĐỘ CHỤP -> BẮT ĐẦU CHỤP VÀ GỬI AI
+            // ==========================================
+            
+            // 1. Chuyển UI sang trạng thái đang quét
             btnScan.disabled = true;
             btnIcon.className = 'fa-solid fa-spinner fa-spin';
             btnText.textContent = 'AI ĐANG PHÂN TÍCH ẢNH...';
             mainCard.classList.add('scanning');
 
-            // Capture frame
+            // 2. Chụp khung hình hiện tại lên Canvas
             canvas.width  = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
             const base64Image = canvas.toDataURL('image/jpeg');
 
+            // 3. Đóng băng hình ảnh trên màn hình (Ẩn Video, Hiện Canvas)
+            video.style.display = 'none';
+            canvas.style.display = 'block';
+
+            // 4. TẮT CAMERA HOÀN TOÀN để tránh nóng máy và tiết kiệm pin
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+
+            // 5. Gửi dữ liệu lên Backend
             try {
                 const response = await fetch('/predict', {
                     method: 'POST',
@@ -435,9 +478,10 @@
                 if (result.success) {
                     const resultBox = document.getElementById('result-box');
                     resultBox.classList.remove('visible');
-                    // Force reflow so animation replays
+                    // Force reflow để animation chạy lại mượt mà
                     void resultBox.offsetWidth;
 
+                    // Xử lý text và điểm số
                     const aiText = result.prediction.replace(/\n/g, '<br>');
                     document.getElementById('res-huongdan').innerHTML = aiText;
 
@@ -454,14 +498,16 @@
                 }
             } catch (error) {
                 console.error("Lỗi chi tiết:", error);
-                alert("Đã xảy ra lỗi trong quá trình xử lý giao diện!");
+                alert("Đã xảy ra lỗi kết nối với máy chủ AI!");
             }
 
-            // Reset UI
+            // 6. Hoàn tất quá trình: Đổi nút thành "QUÉT MÓN KHÁC"
             mainCard.classList.remove('scanning');
             btnScan.disabled = false;
-            btnIcon.className = 'fa-solid fa-camera-retro';
-            btnText.textContent = 'BẤM CHỤP QUÉT RÁC THẢI';
+            btnScan.classList.add('btn-reset'); // Đổi màu nút để người dùng chú ý
+            btnIcon.className = 'fa-solid fa-rotate-right';
+            btnText.textContent = 'QUÉT MÓN KHÁC';
+            isResultMode = true; // Bật cờ đánh dấu đã phân tích xong
         });
     </script>
 </body>
