@@ -34,7 +34,6 @@
             width: 100%;
         }
 
-        /* ── Particle dots background ── */
         body::before {
             content: '';
             position: fixed; inset: 0;
@@ -48,7 +47,6 @@
         }
         @keyframes bgdrift { to { background-position: 44px 44px, 66px 66px; } }
 
-        /* ── Decorative glowing orbs ── */
         .orb {
             position: fixed; border-radius: 50%;
             filter: blur(80px); pointer-events: none; z-index: 0;
@@ -59,7 +57,6 @@
 
         .wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 20px 14px 40px; }
 
-        /* ── Header ── */
         .hero { text-align: center; margin-bottom: 24px; animation: fadedown 0.7s ease both; }
         @keyframes fadedown { from{opacity:0;transform:translateY(-18px)} to{opacity:1;transform:translateY(0)} }
 
@@ -86,7 +83,6 @@
         }
         .hero p { color: var(--muted); font-size: 0.85rem; margin-top: 6px; font-weight: 600; letter-spacing: 0.5px; }
 
-        /* ── Glass card ── */
         .glass-card {
             background: var(--glass);
             border: 1px solid var(--glass-border);
@@ -99,7 +95,6 @@
         }
         @keyframes risein { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
 
-        /* ── Input ── */
         .field-label {
             font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;
             text-transform: uppercase; color: var(--lime); margin-bottom: 8px;
@@ -123,7 +118,6 @@
 
         .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-border), transparent); margin: 18px 0; }
 
-        /* ── Camera frame ── */
         .cam-wrap {
             position: relative;
             border-radius: 18px; overflow: hidden;
@@ -154,7 +148,6 @@
         }
         #canvas { display: none; }
 
-        /* Scanning laser line */
         .scan-line {
             position: absolute; left: 0; right: 0; height: 2px; top: 0; z-index: 8;
             background: linear-gradient(90deg, transparent, var(--lime), var(--teal), var(--lime), transparent);
@@ -186,7 +179,6 @@
         }
         .scanning .scan-overlay { opacity: 1; }
 
-        /* ── Scan button ── */
         .btn-scan {
             margin-top: 18px; width: 100%; border: none; cursor: pointer;
             border-radius: 14px; padding: 15px 16px;
@@ -219,7 +211,6 @@
             animation: none;
         }
 
-        /* ── Result box ── */
         #result-box {
             margin-top: 18px;
             background: linear-gradient(145deg, rgba(14,60,28,0.85), rgba(5,28,13,0.9));
@@ -268,7 +259,6 @@
             color: rgba(232,245,233,0.88); font-weight: 600;
         }
 
-        /* ── Score badges ── */
         .score-row { display: flex; gap: 10px; margin-top: 16px; }
         .score-chip {
             flex: 1; border-radius: 14px; padding: 12px 8px;
@@ -312,7 +302,6 @@
     <div class="orb orb-2"></div>
 
     <div class="wrapper">
-
         <div class="hero">
             <div class="logo-ring"><i class="fa-solid fa-leaf"></i></div>
             <h1>HỆ THỐNG PHÂN LOẠI<br>RÁC THẢI AI</h1>
@@ -320,7 +309,6 @@
         </div>
 
         <div class="glass-card" id="main-card">
-
             <div class="mb-4">
                 <div class="field-label"><i class="fa-solid fa-id-badge"></i> Mã học sinh / Họ tên lớp</div>
                 <input type="text" id="username" value="HS_NguyenVanA_10A1" placeholder="Nhập tên để tích điểm thi đua...">
@@ -362,12 +350,11 @@
                     </div>
                 </div>
             </div>
-
         </div>
+
         <div class="footer-bar">
             Powered by <span>Google Gemini AI</span> &nbsp;·&nbsp; Dự thi Sáng Tạo Công Nghệ <span>2026</span>
         </div>
-
     </div>
 
     <script>
@@ -383,7 +370,6 @@
         let currentStream = null;
         let isResultMode = false;
 
-        // ── Hàm khởi động hệ thống Camera ──
         async function startCamera() {
             try {
                 currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
@@ -403,13 +389,9 @@
             }
         }
 
-        // Tự động kích hoạt khi học sinh mở trang web
         startCamera();
 
-        // ── Logic điều khiển nút bấm Chụp/Quét lại ──
         btnScan.addEventListener('click', async () => {
-            
-            // NẾU ĐANG HIỂN THỊ KẾT QUẢ -> CLICK SẼ RESET ĐỂ QUÉT VẬT THỂ MỚI
             if (isResultMode) {
                 const resultBox = document.getElementById('result-box');
                 resultBox.classList.remove('visible');
@@ -424,28 +406,27 @@
                 return;
             }
 
-            // NẾU ĐANG TRONG TRẠNG THÁI CHỤP -> TIẾN HÀNH CHỤP VÀ QUA MÁY CHỦ AI
             btnScan.disabled = true;
             btnIcon.className = 'fa-solid fa-spinner fa-spin';
             btnText.textContent = 'AI ĐANG PHÂN TÍCH ẢNH...';
             mainCard.classList.add('scanning');
 
-            // Chụp đóng băng khung hình và vẽ lên canvas ngầm
-            canvas.width  = video.videoWidth;
-            canvas.height = video.videoHeight;
+            // ── NÉN KÍCH THƯỚC VÀ DUNG LƯỢNG ẢNH ĐỂ CHẠY SIÊU TỐC TẠI ĐÂY ──
+            canvas.width  = 640;
+            canvas.height = 480;
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            const base64Image = canvas.toDataURL('image/jpeg');
+            
+            // Chất lượng 0.5 (Nén 50% dung lượng giúp tải cực nhanh không lo Timeout)
+            const base64Image = canvas.toDataURL('image/jpeg', 0.5);
 
             video.style.display = 'none';
             canvas.style.display = 'block';
 
-            // Giải phóng tài nguyên camera ngay lập tức giúp máy không bị nóng
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
                 currentStream = null;
             }
 
-            // Gửi dữ liệu Base64 lên Endpoint /predict
             try {
                 const response = await fetch('/predict', {
                     method: 'POST',
@@ -458,13 +439,11 @@
                 if (result.success) {
                     const resultBox = document.getElementById('result-box');
                     resultBox.classList.remove('visible');
-                    void resultBox.offsetWidth; // Trigger reflow ép làm mới animation
+                    void resultBox.offsetWidth;
 
-                    // Hiển thị nội dung phân tích từ AI trả về
                     const aiText = result.prediction.replace(/\n/g, '<br>');
                     document.getElementById('res-huongdan').innerHTML = aiText;
 
-                    // Đồng bộ điểm cộng thực tế từ AI và tổng quỹ điểm thật từ DB hệ thống
                     document.getElementById('res-diem').innerText = result.diem_cong_tu_ai;
                     document.getElementById('res-tongdiem').innerText = result.tong_diem_he_thong;
 
@@ -479,7 +458,6 @@
                 alert("Đã xảy ra lỗi kết nối với máy chủ AI!");
             }
 
-            // Đổi giao diện nút bấm sang chế độ "QUÉT MÓN KHÁC"
             mainCard.classList.remove('scanning');
             btnScan.disabled = false;
             btnScan.classList.add('btn-reset');
