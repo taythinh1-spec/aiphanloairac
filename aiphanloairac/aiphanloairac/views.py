@@ -13,7 +13,7 @@ from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 
 # ============================================================
-# CẤU HÌNH KHỞI TẠO
+# CẤU HÌNH KHỞI TẠO FLASK (Đã tối ưu đường dẫn cho Render)
 # ============================================================
 
 load_dotenv()
@@ -21,9 +21,14 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+# Khởi tạo Flask độc lập, định nghĩa rõ ràng thư mục giao diện để tránh lỗi 404 Template
+app = Flask(
+    __name__,
+    template_folder="templates",
+    static_folder="static"
+)
 
-# Bảng tra cứu điểm và nhãn hiển thị map chuẩn cấu hình thi đua học đường
+# Bảng tra cứu điểm và nhãn hiển thị theo chuẩn thi đua học đường
 WASTE_CATEGORIES = {
     "Tai_Che": (10, "Chai lọ nhựa / Lon nhôm tái chế ♻️"),
     "Huu_Co":  (5,  "Thức ăn thừa / Vỏ trái cây 🌱"),
@@ -42,7 +47,7 @@ GEMINI_PROMPT = (
 )
 
 # ============================================================
-# HÀM TIỆN ÍCH TỐI ƯU
+# HÀM TIỆN ÍCH GIẢI MÃ ẢNH
 # ============================================================
 
 def decode_base64_image(image_data: str) -> Image.Image:
@@ -57,9 +62,8 @@ def decode_base64_image(image_data: str) -> Image.Image:
     except Exception as e:
         raise ValueError(f"Dữ liệu ảnh không hợp lệ: {e}") from e
 
-
 # ============================================================
-# CẤU HÌNH ROUTE CHÍNH
+# CÁC ROUTE XỬ LÝ (ĐƯỜNG DẪN WEB)
 # ============================================================
 
 @app.route("/")
@@ -69,9 +73,9 @@ def index():
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    """Xử lý phân loại rác bằng Gemini JSON Mode và lưu điểm thi đua học sinh."""
+    """Xử lý phân loại rác bằng Gemini JSON Mode và lưu điểm vào MongoDB."""
     try:
-        # 1. KIỂM TRA BẢO MẬT BIẾN MÔI TRƯỜNG NGAY KHI GỌI ROUTE
+        # 1. KIỂM TRA BIẾN MÔI TRƯỜNG KHI CÓ REQUEST
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         mongo_uri = os.getenv("MONGO_URI")
         
@@ -80,7 +84,7 @@ def predict():
         if not mongo_uri:
             return jsonify({"success": False, "error": "Hệ thống chưa cấu hình MONGO_URI trên Render."}), 503
 
-        # 2. ĐỌC DỮ LIỆU TỪ FRONTEND
+        # 2. ĐỌC DỮ LIỆU TỪ FE GỬI LÊN
         data = request.get_json(force=True)
         image_data = data.get("image", "")
         username = (data.get("username", "") or "Hoc_Sinh_An_Danh").strip()
@@ -88,13 +92,13 @@ def predict():
         if not image_data:
             return jsonify({"success": False, "error": "Không nhận được dữ liệu ảnh từ camera."}), 400
 
-        # --- Bước 1: Giải mã hình ảnh từ Client ---
+        # --- Bước 1: Giải mã hình ảnh ---
         try:
             image = decode_base64_image(image_data)
         except ValueError as e:
             return jsonify({"success": False, "error": str(e)}), 400
 
-        # --- Bước 2: Khởi tạo bốc đầu dịch vụ AI & Gọi Content ---
+        # --- Bước 2: Gọi Gemini AI (Sửa lỗi 404 bằng định danh chính xác 'models/') ---
         try:
             genai.configure(api_key=api_key)
             gemini_model = genai.GenerativeModel("models/gemini-1.5-flash")
@@ -106,7 +110,7 @@ def predict():
             ai_data = json.loads(response.text.strip())
         except Exception as e:
             logger.error("Lỗi tương tác Gemini API: %s", e)
-            return jsonify({"success": False, "error": f"Dịch vụ AI gặp sự cố: {str(e)}"}), 503
+            return jsonify({"success": False, "error": "Dịch vụ AI tạm thời gặp sự cố kết nối."}), 503
 
         # Trích xuất dữ liệu an toàn từ kết quả của AI
         loai_ai = ai_data.get("loai", "Vo_Co").strip()
@@ -133,9 +137,9 @@ def predict():
                 tong_diem = user_info["diem"] if user_info else diem_cong
         except Exception as e:
             logger.error("Lỗi đồng bộ dữ liệu điểm MongoDB: %s", e)
-            return jsonify({"success": False, "error": "Lỗi kết nối cơ sở dữ liệu điểm."}), 503
+            return jsonify({"success": False, "error": "Lỗi kết nối cơ sở dữ liệu điểm số."}), 503
 
-        # --- Bước 5: Trả dữ liệu chuẩn Key Frontend ---
+        # --- Bước 5: Trả dữ liệu map đúng hoàn toàn với Frontend cũ ---
         return jsonify({
             "success": True,
             "prediction": chuoi_hien_thi,
@@ -145,7 +149,7 @@ def predict():
 
     except Exception as e:
         logger.exception("Lỗi hệ thống tại /predict")
-        return jsonify({"success": False, "error": "Đã xảy ra lỗi máy chủ."}), 500
+        return jsonify({"success": False, "error": "Đã xảy ra lỗi máy chủ không mong muốn."}), 500
 
 
 if __name__ == "__main__":
