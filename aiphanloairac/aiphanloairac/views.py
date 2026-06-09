@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 from PIL import Image
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure, PyMongoError
+from pymongo.errors import PyMongoError
 
 # ============================================================
 # CẤU HÌNH KHỞI TẠO
@@ -22,55 +22,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-
-
-# ============================================================
-# KHỞI TẠO CÁC DỊCH VỤ (Chạy một lần khi server khởi động)
-# ============================================================
-
-def _init_gemini():
-    """Khởi tạo model Google Gemini AI từ biến môi trường."""
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("Thiếu biến môi trường API Key của Gemini trong cấu hình")
-    genai.configure(api_key=api_key)
-    logger.info("Đã cấu hình Google Gemini AI thành công.")
-    
-    # Đã sửa đổi: Thêm tiền tố 'models/' để định danh chính xác trên API của Render
-    return genai.GenerativeModel("models/gemini-1.5-flash")
-
-
-def _init_mongodb():
-    """Khởi tạo kết nối MongoDB Atlas với Connection Pooling."""
-    mongo_uri = os.getenv("MONGO_URI")
-    if not mongo_uri:
-        raise ValueError("Thiếu biến môi trường MONGO_URI")
-
-    # Tăng thời gian chờ lên 10s đề phòng mạng Render kết nối sang Atlas bị chậm lúc khởi động
-    mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=10000)
-    
-    # Kiểm tra kết nối bằng lệnh ping
-    mongo_client.admin.command("ping")
-    logger.info("Đã kết nối MongoDB Atlas thành công.")
-    return mongo_client
-
-
-# Khởi động dịch vụ hệ thống an toàn
-try:
-    gemini_model = _init_gemini()
-    db_client = _init_mongodb()
-    users_collection = db_client["CuocThiSangTao"]["XepHangHocSinh"]
-except (ValueError, ConnectionFailure, Exception) as e:
-    logger.critical("Lỗi khởi tạo dịch vụ hệ thống: %s", e)
-    # Không làm sập ngang server Render, gán None để handle khéo léo ở route
-    gemini_model = None
-    db_client = None
-    logger.warning("Hệ thống khởi động ở chế độ dự phòng (Mất kết nối dịch vụ).")
-
-
-# ============================================================
-# CẤU HÌNH PHÂN LOẠI RÁC
-# ============================================================
 
 # Bảng tra cứu điểm và nhãn hiển thị map chuẩn cấu hình thi đua học đường
 WASTE_CATEGORIES = {
@@ -90,7 +41,6 @@ GEMINI_PROMPT = (
     "}"
 )
 
-
 # ============================================================
 # HÀM TIỆN ÍCH TỐI ƯU
 # ============================================================
@@ -108,22 +58,8 @@ def decode_base64_image(image_data: str) -> Image.Image:
         raise ValueError(f"Dữ liệu ảnh không hợp lệ: {e}") from e
 
 
-def update_user_score(username: str, diem_cong: int) -> int:
-    """Cộng điểm tích lũy vào MongoDB (Upsert) và lấy tổng điểm mới nhất."""
-    if users_collection is None:
-        raise PyMongoError("Kết nối cơ sở dữ liệu chưa sẵn sàng.")
-        
-    users_collection.update_one(
-        {"username": username},
-        {"$inc": {"diem": diem_cong}},
-        upsert=True,
-    )
-    user_info = users_collection.find_one({"username": username})
-    return user_info["diem"] if user_info else diem_cong
-
-
 # ============================================================
-# CÁC ROUTE (ĐƯỜNG DẪN WEB)
+# CẤU HÌNH ROUTE CHÍNH
 # ============================================================
 
 @app.route("/")
@@ -134,11 +70,17 @@ def index():
 @app.route("/predict", methods=["POST"])
 def predict():
     """Xử lý phân loại rác bằng Gemini JSON Mode và lưu điểm thi đua học sinh."""
-    # Kiểm tra xem dịch vụ AI có khởi động lỗi từ trước không
-    if gemini_model is None:
-        return jsonify({"success": False, "error": "Hệ thống AI chưa được cấu hình hoặc lỗi API Key."}), 503
-
     try:
+        # 1. KIỂM TRA BẢO MẬT BIẾN MÔI TRƯỜNG NGAY KHI GỌI ROUTE
+        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        mongo_uri = os.getenv("MONGO_URI")
+        
+        if not api_key:
+            return jsonify({"success": False, "error": "Hệ thống chưa cấu hình GEMINI_API_KEY trên Render."}), 503
+        if not mongo_uri:
+            return jsonify({"success": False, "error": "Hệ thống chưa cấu hình MONGO_URI trên Render."}), 503
+
+        # 2. ĐỌC DỮ LIỆU TỪ FRONTEND
         data = request.get_json(force=True)
         image_data = data.get("image", "")
         username = (data.get("username", "") or "Hoc_Sinh_An_Danh").strip()
@@ -152,17 +94,19 @@ def predict():
         except ValueError as e:
             return jsonify({"success": False, "error": str(e)}), 400
 
-        # --- Bước 2: Gọi Gemini AI phản hồi dạng JSON chuẩn ---
+        # --- Bước 2: Khởi tạo bốc đầu dịch vụ AI & Gọi Content ---
         try:
+            genai.configure(api_key=api_key)
+            gemini_model = genai.GenerativeModel("models/gemini-1.5-flash")
+            
             response = gemini_model.generate_content(
                 [GEMINI_PROMPT, image],
                 generation_config={"response_mime_type": "application/json"}
             )
-            # Chuyển đổi dữ liệu chuỗi JSON từ AI thành Dictionary Python
             ai_data = json.loads(response.text.strip())
         except Exception as e:
-            logger.error("Lỗi tương tác Gemini API hoặc cấu trúc trả về: %s", e)
-            return jsonify({"success": False, "error": "Dịch vụ AI tạm thời gặp sự cố kết nối."}), 503
+            logger.error("Lỗi tương tác Gemini API: %s", e)
+            return jsonify({"success": False, "error": f"Dịch vụ AI gặp sự cố: {str(e)}"}), 503
 
         # Trích xuất dữ liệu an toàn từ kết quả của AI
         loai_ai = ai_data.get("loai", "Vo_Co").strip()
@@ -171,30 +115,37 @@ def predict():
 
         # --- Bước 3: Tra cứu hệ thống điểm thi đua ---
         if loai_ai not in WASTE_CATEGORIES:
-            loai_ai = "Vo_Co"  # Hạ cấp an toàn nếu AI trả về phân loại nằm ngoài danh mục
+            loai_ai = "Vo_Co"
         diem_cong, nhan_loai = WASTE_CATEGORIES[loai_ai]
 
-        # Định dạng cấu trúc hiển thị đồng bộ tuyệt đối với Frontend cũ
         chuoi_hien_thi = f"📍 ĐỒ VẬT: {ten_mon_do.upper()} -> {nhan_loai.upper()}\n💡 GIẢI PHÁP: {loi_khuyen}"
 
-        # --- Bước 4: Cập nhật bảng xếp hạng thi đua học sinh ---
+        # --- Bước 4: Khởi tạo kết nối MongoDB động để cộng điểm ---
         try:
-            tong_diem = update_user_score(username, diem_cong)
-        except (PyMongoError, Exception) as e:
+            with MongoClient(mongo_uri, serverSelectionTimeoutMS=5000) as client:
+                users_collection = client["CuocThiSangTao"]["XepHangHocSinh"]
+                users_collection.update_one(
+                    {"username": username},
+                    {"$inc": {"diem": diem_cong}},
+                    upsert=True,
+                )
+                user_info = users_collection.find_one({"username": username})
+                tong_diem = user_info["diem"] if user_info else diem_cong
+        except Exception as e:
             logger.error("Lỗi đồng bộ dữ liệu điểm MongoDB: %s", e)
-            return jsonify({"success": False, "error": "Lỗi hệ thống lưu trữ điểm số học sinh."}), 503
+            return jsonify({"success": False, "error": "Lỗi kết nối cơ sở dữ liệu điểm."}), 503
 
-        # --- Bước 5: Trả dữ liệu đúng Key Frontend đang mong đợi ---
+        # --- Bước 5: Trả dữ liệu chuẩn Key Frontend ---
         return jsonify({
             "success": True,
-            "prediction": chuoi_hien_thi,         # Đúng Key frontend nhận diện
-            "diem_cong_tu_ai": diem_cong,         # Đúng Key frontend nhận diện
-            "tong_diem_he_thong": tong_diem,      # Đúng Key frontend nhận diện
+            "prediction": chuoi_hien_thi,
+            "diem_cong_tu_ai": diem_cong,
+            "tong_diem_he_thong": tong_diem,
         })
 
     except Exception as e:
-        logger.exception("Lỗi không lường trước tại /predict")
-        return jsonify({"success": False, "error": "Đã xảy ra lỗi hệ thống máy chủ."}), 500
+        logger.exception("Lỗi hệ thống tại /predict")
+        return jsonify({"success": False, "error": "Đã xảy ra lỗi máy chủ."}), 500
 
 
 if __name__ == "__main__":
