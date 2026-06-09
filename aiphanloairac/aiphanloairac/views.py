@@ -2,9 +2,11 @@ import base64
 import re
 import cv2
 import numpy as np
-from flask import render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify
 from ultralytics import YOLO
-from aiphanloairac import app  # Đảm bảo import đúng tên biến app của dự án
+
+# ── KHỞI TẠO BIẾN APP FLASK NGAY TẠI ĐÂY ĐỂ TRÁNH LỖI IMPORT ──
+app = Flask(__name__, template_folder='templates')
 
 # Khởi tạo mô hình AI YOLOv8 phiên bản siêu nhẹ
 model_ai = YOLO('yolov8n.pt')
@@ -15,7 +17,7 @@ USER_POINTS_DB = {}
 @app.route('/')
 @app.route('/home')
 def index():
-    # Trả về giao diện trang chủ Cyberpunk Eco
+    # Trả về giao diện trang chủ Cyberpunk Eco của cậu
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
@@ -85,7 +87,6 @@ def predict():
                         diem_cong = 20
 
         # 4. CHUẨN HÓA CHUỖI TEXT ĐỂ TRẢ VỀ KHỚP MÀN HÌNH HTML CYBERPUNK
-        # Sử dụng ký tự \n để Javascript biên dịch xuống hàng chuẩn bằng hàm .replace()
         chuoi_hien_thi = f"📍 ĐỒ VẬT: {loai_rac.upper()}\n💡 GIẢI PHÁP: {huong_dan}"
 
         # 5. CỘNG VÀ LƯU QUỸ ĐIỂM THI ĐUA CHO HỌC SINH
@@ -103,3 +104,7 @@ def predict():
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# Khởi chạy cục bộ nếu test máy cá nhân
+if __name__ == '__main__':
+    app.run(debug=True)
