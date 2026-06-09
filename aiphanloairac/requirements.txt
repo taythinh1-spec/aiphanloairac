@@ -5,3 +5,4 @@ pymongo
 dnspython
 python-dotenv
 gunicorn
+google-genai
