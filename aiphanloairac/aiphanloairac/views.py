@@ -1,86 +1,105 @@
-import os
+import base64
+import re
 import cv2
 import numpy as np
 from flask import render_template, request, jsonify
-from werkzeug.utils import secure_filename
 from ultralytics import YOLO
-from aiphanloairac import app  # Đảm bảo đúng tên import dự án của cậu
+from aiphanloairac import app  # Đảm bảo import đúng tên biến app của dự án
 
-# Khởi tạo mô hình AI YOLOv8
+# Khởi tạo mô hình AI YOLOv8 phiên bản siêu nhẹ
 model_ai = YOLO('yolov8n.pt')
 
-# Cấu hình thư mục tạm để lưu ảnh rác người dùng tải lên
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# Database giả lập lưu trữ tổng quỹ điểm thi đua của học sinh trên RAM máy chủ
+USER_POINTS_DB = {}
 
 @app.route('/')
 @app.route('/home')
 def index():
+    # Trả về giao diện trang chủ Cyberpunk Eco
     return render_template('index.html')
 
-@app.route('/upload_trash', methods=['POST'])
-def upload_trash():
-    if 'file' not in request.files:
-        return jsonify({'error': 'Không tìm thấy file gửi lên'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'Chưa chọn file ảnh'}), 400
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        data = request.json
+        if not data or 'image' not in data:
+            return jsonify({'success': False, 'error': 'Không nhận được dữ liệu ảnh!'}), 400
+        
+        # Lấy tên học sinh, nếu để trống thì mặc định là Học sinh ẩn danh
+        username = data.get('username', 'Học sinh ẩn danh').strip()
+        if not username:
+            username = 'Học sinh ẩn danh'
 
-    if file:
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+        # 1. GIẢI MÃ DỮ LIỆU ẢNH BASE64 GỬI TỪ TRÌNH DUYỆT ĐIỆN THOẠI
+        image_data = data['image']
+        image_data = re.sub('^data:image/.+;base64,', '', image_data)
+        
+        img_bytes = base64.b64decode(image_data)
+        np_img = np.frombuffer(img_bytes, dtype=np.uint8)
+        frame = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
 
-        # Đọc ảnh bằng OpenCV để AI xử lý
-        frame = cv2.imread(filepath)
         if frame is None:
-            return jsonify({'error': 'Định dạng ảnh không hợp lệ'}), 400
+            return jsonify({'success': False, 'error': 'Dữ liệu hình ảnh bị hỏng hoặc lỗi định dạng!'}), 400
 
+        # 2. ĐƯA ẢNH VÀO MÔ HÌNH AI YOLO ĐỂ PHÂN TÍCH VẬT THỂ
         results = model_ai(frame)
         
-        # Biến đếm xem phát hiện được bao nhiêu vật thể rác
-        trash_count = 0
+        highest_conf = 0
+        loai_rac = "Vật thể lạ / Rác vô cơ khác"
+        huong_dan = "RÁC CÒN LẠI: Nếu đây là túi nilon, hộp xốp bẩn hoặc khăn giấy cũ, hãy vứt vào THÙNG RÁC VÔ CƠ (Màu xám/vàng) nhé!"
+        diem_cong = 2 # Điểm khuyến khích tối thiểu cho việc quét rác
 
+        # Duyệt tìm vật thể AI quét được có độ tự tin cao nhất
         for r in results:
             boxes = r.boxes
             for box in boxes:
                 cls = int(box.cls[0])
-                conf = int(box.conf[0] * 100)
+                conf = float(box.conf[0])
                 original_name = model_ai.names[cls]
 
-                if conf > 35:  # Độ tự tin trên 35%
-                    trash_count += 1
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                # Chỉ lấy vật thể rõ ràng (Độ tự tin trên 35%) và cao nhất trong khung hình
+                if conf > highest_conf and conf > 0.35:
+                    highest_conf = conf
                     
-                    # Phân loại rác bằng tư duy logic
-                    label = f"{original_name}"
-                    color = (255, 255, 255) # Trắng
+                    # 3. LOGIC XỬ LÝ PHÂN LOẠI & GỢI Ý GIẢI PHÁP HỌC ĐƯỜNG
+                    # Nhóm rác tái chế (Chai lọ, lon, sách báo...)
+                    if original_name in ['bottle', 'cup', 'can', 'wine glass']:
+                        loai_rac = "Chai lọ nhựa / Lon nhôm tái chế"
+                        huong_dan = "🍀 RÁC TÁI CHẾ: Vui lòng súc sạch nước tồn đọng bên trong, ép dẹp (nếu được) và bỏ vào THÙNG RÁC MÀU XANH LÁ của trường để tích điểm cao nhé!"
+                        diem_cong = 10
+                    elif original_name in ['book', 'paper']:
+                        loai_rac = "Sách báo / Giấy vụn"
+                        huong_dan = "🍀 RÁC TÁI CHẾ: Hãy vuốt phẳng, xếp gọn gàng tránh làm ướt bẩn và để vào KHU VỰC THU GOM GIẤY VỤN thi đua kế hoạch nhỏ của lớp."
+                        diem_cong = 10
+                    
+                    # Nhóm rác hữu cơ (Thức ăn vụn, trái cây...)
+                    elif original_name in ['apple', 'banana', 'orange', 'sandwich', 'cake', 'broccoli']:
+                        loai_rac = "Thức ăn thừa / Vỏ trái cây"
+                        huong_dan = "🍌 RÁC HỮU CƠ: Bạn đổ phần thức ăn thừa hoặc vỏ cây này vào THÙNG RÁC MÀU XANH DƯƠNG chuyên dụng để nhà trường ủ làm phân bón cây xanh."
+                        diem_cong = 5
 
-                    if original_name in ['bottle', 'cup', 'can', 'book', 'wine glass']:
-                        label = "RAC TAI CHE"
-                        color = (0, 255, 0) # Xanh lá
-                    elif original_name in ['apple', 'banana', 'orange', 'sandwich', 'cake']:
-                        label = "RAC HUU CO"
-                        color = (0, 165, 255) # Cam
-                    elif original_name in ['cell phone', 'laptop', 'remote', 'keyboard', 'mouse']:
-                        label = "RAC DIEN TU"
-                        color = (0, 0, 255) # Đỏ
+                    # Nhóm rác điện tử / Nguy hiểm học đường
+                    elif original_name in ['cell phone', 'laptop', 'remote', 'keyboard', 'mouse', 'scissors']:
+                        loai_rac = "Thiết bị điện tử / Vật sắc nhọn"
+                        huong_dan = "⚠️ RÁC NGUY HIỂM: Tuyệt đối không vứt chung vào thùng rác sinh hoạt. Hãy mang đến THÙNG THU GOM PIN VÀ ĐIỆN TỬ CŨ tại văn phòng Đoàn trường để xử lý riêng."
+                        diem_cong = 20
 
-                    # Vẽ khung hình và chữ đè lên ảnh gốc
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 3)
-                    cv2.putText(frame, f"{label} {conf}%", (x1, y1 - 10), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+        # 4. CHUẨN HÓA CHUỖI TEXT ĐỂ TRẢ VỀ KHỚP MÀN HÌNH HTML CYBERPUNK
+        # Sử dụng ký tự \n để Javascript biên dịch xuống hàng chuẩn bằng hàm .replace()
+        chuoi_hien_thi = f"📍 ĐỒ VẬT: {loai_rac.upper()}\n💡 GIẢI PHÁP: {huong_dan}"
 
-        # Lưu đè ảnh đã được vẽ khung AI lại vào thư mục static
-        processed_filename = 'ai_' + filename
-        processed_filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
-        cv2.imwrite(processed_filepath, frame)
+        # 5. CỘNG VÀ LƯU QUỸ ĐIỂM THI ĐUA CHO HỌC SINH
+        if username not in USER_POINTS_DB:
+            USER_POINTS_DB[username] = 0
+        USER_POINTS_DB[username] += diem_cong
 
-        # Trả kết quả link ảnh về cho giao diện hiển thị mà không cần tải lại trang
+        # 6. TRẢ DỮ LIỆU ĐỊNH DẠNG JSON VỀ TRÌNH DUYỆT
         return jsonify({
             'success': True,
-            'image_url': f'/static/uploads/{processed_filename}',
-            'count': trash_count
+            'prediction': chuoi_hien_thi,
+            'diem_cong_tu_ai': diem_cong,
+            'tong_diem_he_thong': USER_POINTS_DB[username]
         })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
