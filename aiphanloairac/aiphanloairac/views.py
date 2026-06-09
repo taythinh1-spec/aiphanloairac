@@ -4,16 +4,16 @@ import json
 import logging
 import os
 
-# === THƯ VIỆN BÊN NGOÀI ===
-import google.generativeai as genai
+# === THƯ VIỆN CHUẨN THẾ HỆ MỚI ===
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 from PIL import Image
 from pymongo import MongoClient
-from pymongo.errors import PyMongoError
 
 # ============================================================
-# CẤU HÌNH KHỞI TẠO FLASK & CẤU HÌNH AI TOÀN CỤC
+# CẤU HÌNH KHỞI TẠO FLASK
 # ============================================================
 
 load_dotenv()
@@ -26,14 +26,6 @@ app = Flask(
     template_folder="templates",
     static_folder="static"
 )
-
-# Khởi tạo cấu hình API Key của Gemini ngay khi khởi động hệ thống để giữ kết nối ổn định
-API_KEY = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-if API_KEY:
-    genai.configure(api_key=API_KEY)
-    logger.info("Đã xác thực Google Gemini API toàn cục thành công.")
-else:
-    logger.warning("CẢNH BÁO: Chưa tìm thấy GEMINI_API_KEY trong biến môi trường.")
 
 # Bảng tra cứu điểm và nhãn hiển thị theo chuẩn thi đua học đường
 WASTE_CATEGORIES = {
@@ -80,13 +72,13 @@ def index():
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    """Xử lý phân loại rác bằng Gemini JSON Mode và lưu điểm vào MongoDB."""
+    """Xử lý phân loại rác bằng Gemini JSON Mode thế hệ mới và lưu điểm vào MongoDB."""
     try:
         # 1. KIỂM TRA BIẾN MÔI TRƯỜNG KHI CÓ REQUEST GỬI LÊN
-        current_api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         mongo_uri = os.getenv("MONGO_URI")
         
-        if not current_api_key:
+        if not api_key:
             return jsonify({"success": False, "error": "Hệ thống chưa cấu hình GEMINI_API_KEY trên Render."}), 503
         if not mongo_uri:
             return jsonify({"success": False, "error": "Hệ thống chưa cấu hình MONGO_URI trên Render."}), 503
@@ -105,19 +97,22 @@ def predict():
         except ValueError as e:
             return jsonify({"success": False, "error": str(e)}), 400
 
-        # --- Bước 2: Gọi Gemini AI xử lý ảnh với cấu trúc JSON Mode ổn định ---
+        # --- Bước 2: Gọi Gemini API bằng Client Thế Hệ Mới ---
         try:
-            # Khởi tạo nhanh model dựa trên token đã xác thực toàn cục bên trên
-            gemini_model = genai.GenerativeModel("models/gemini-1.5-flash")
+            # Khởi tạo client cục bộ bảo mật, tự động tối ưu luồng gọi trên Cloud
+            client_ai = genai.Client(api_key=api_key)
             
-            response = gemini_model.generate_content(
-                [GEMINI_PROMPT, image],
-                generation_config={"response_mime_type": "application/json"}
+            response = client_ai.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=[image, GEMINI_PROMPT],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                ),
             )
             ai_data = json.loads(response.text.strip())
         except Exception as e:
-            logger.error("Lỗi tương tác hoặc phân giải cấu trúc Gemini API: %s", e)
-            return jsonify({"success": False, "error": "Hệ thống AI bận hoặc API Key chưa được Render kích hoạt kịp thời."}), 503
+            logger.error("Lỗi tương tác Gemini API thế hệ mới: %s", e)
+            return jsonify({"success": False, "error": "Dịch vụ AI đang bận, vui lòng thử lại sau vài giây."}), 503
 
         # Trích xuất dữ liệu an toàn từ kết quả của AI
         loai_ai = ai_data.get("loai", "Vo_Co").strip()
@@ -133,8 +128,8 @@ def predict():
 
         # --- Bước 4: Khởi tạo kết nối MongoDB động để cộng điểm thi đua ---
         try:
-            with MongoClient(mongo_uri, serverSelectionTimeoutMS=5000) as client:
-                users_collection = client["CuocThiSangTao"]["XepHangHocSinh"]
+            with MongoClient(mongo_uri, serverSelectionTimeoutMS=5000) as client_db:
+                users_collection = client_db["CuocThiSangTao"]["XepHangHocSinh"]
                 users_collection.update_one(
                     {"username": username},
                     {"$inc": {"diem": diem_cong}},
@@ -146,7 +141,7 @@ def predict():
             logger.error("Lỗi đồng bộ dữ liệu điểm MongoDB: %s", e)
             return jsonify({"success": False, "error": "Lỗi kết nối cơ sở dữ liệu điểm số học sinh."}), 503
 
-        # --- Bước 5: Trả dữ liệu map đúng hoàn toàn với Frontend cũ ---
+        # --- Bước 5: Trả dữ liệu map chuẩn Frontend ---
         return jsonify({
             "success": True,
             "prediction": chuoi_hien_thi,
