@@ -31,7 +31,6 @@
             font-family: 'Nunito', sans-serif;
             color: var(--text);
             overflow-x: hidden;
-            /* Chống cuộn ngang trên mobile */
             width: 100%;
         }
 
@@ -58,7 +57,6 @@
         .orb-2 { width: 280px; height: 280px; background: radial-gradient(circle, rgba(0,229,192,0.16), transparent); bottom: 5%; right: -50px; animation: orbfloat 12s ease-in-out infinite reverse; }
         @keyframes orbfloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-28px)} }
 
-        /* Tối ưu hiển thị vùng đệm cho điện thoại */
         .wrapper { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 20px 14px 40px; }
 
         /* ── Header ── */
@@ -123,7 +121,6 @@
         }
         #username::placeholder { color: rgba(232,245,233,0.3); font-weight: 600; }
 
-        /* ── Divider ── */
         .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--glass-border), transparent); margin: 18px 0; }
 
         /* ── Camera frame ── */
@@ -135,7 +132,6 @@
             background: #000;
         }
 
-        /* Corner accents */
         .cam-wrap::before, .cam-wrap::after {
             content: ''; position: absolute; width: 22px; height: 22px; z-index: 10;
             border-color: var(--lime); border-style: solid;
@@ -150,14 +146,13 @@
         .cam-corner-tr { top: 8px; right: 8px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
         .cam-corner-bl { bottom: 8px; left: 8px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
 
-        /* Tối ưu Canvas và Video để hiển thị khớp nhau tuyệt đối trên Mobile */
         #video, #canvas {
             width: 100%; display: block;
             border-radius: 16px;
             min-height: 280px; max-height: 60vh;
             object-fit: cover;
         }
-        #canvas { display: none; } /* Ẩn canvas mặc định */
+        #canvas { display: none; }
 
         /* Scanning laser line */
         .scan-line {
@@ -175,7 +170,6 @@
             100% { top: 100%; }
         }
 
-        /* Scanning border pulse */
         .scanning .cam-wrap {
             border-color: var(--lime);
             animation: borderpulse 0.8s ease-in-out infinite alternate;
@@ -185,7 +179,6 @@
             to   { box-shadow: 0 0 0 3px rgba(57,211,83,0.5), 0 0 40px rgba(57,211,83,0.6); }
         }
 
-        /* Scan overlay tint */
         .scan-overlay {
             position: absolute; inset: 0; border-radius: 16px;
             background: rgba(57,211,83,0.04); z-index: 7;
@@ -221,7 +214,6 @@
         .btn-scan:active:not(:disabled) { transform: translateY(0); }
         .btn-scan:disabled { opacity: 0.7; cursor: not-allowed; animation: none; }
         
-        /* Hiệu ứng khi đổi sang nút Quét Lại */
         .btn-scan.btn-reset {
             background: linear-gradient(135deg, #0ea84f, #05612c);
             animation: none;
@@ -236,13 +228,11 @@
             padding: 20px 16px;
             display: none;
             backdrop-filter: blur(16px);
-            box-shadow: 0 0 0 1px rgba(57,211,83,0.08), 0 20px 48px rgba(0,0,0,0.5),
-                        0 0 40px rgba(57,211,83,0.08);
+            box-shadow: 0 0 0 1px rgba(57,211,83,0.08), 0 20px 48px rgba(0,0,0,0.5), 0 0 40px rgba(57,211,83,0.08);
         }
         #result-box.visible {
             display: block;
-            animation: bounceup 0.55s cubic-bezier(0.34,1.56,0.64,1) both,
-                       resultglow 1.2s 0.5s ease-out both;
+            animation: bounceup 0.55s cubic-bezier(0.34,1.56,0.64,1) both, resultglow 1.2s 0.5s ease-out both;
         }
         @keyframes bounceup {
             from{opacity:0;transform:translateY(30px) scale(0.96)}
@@ -307,10 +297,8 @@
             font-size: 1.4rem; opacity: 0.12;
         }
 
-        /* ── Scanning state on whole card ── */
         .scanning #btn-scan { animation: none !important; }
 
-        /* ── Footer bar ── */
         .footer-bar {
             text-align: center; margin-top: 24px;
             font-size: 0.7rem; color: var(--muted); font-weight: 600; letter-spacing: 0.3px;
@@ -375,11 +363,14 @@
                 </div>
             </div>
 
-        </div><div class="footer-bar">
+        </div>
+        <div class="footer-bar">
             Powered by <span>Google Gemini AI</span> &nbsp;·&nbsp; Dự thi Sáng Tạo Công Nghệ <span>2026</span>
         </div>
 
-    </div><script>
+    </div>
+
+    <script>
         const video      = document.getElementById('video');
         const canvas     = document.getElementById('canvas');
         const btnScan    = document.getElementById('btn-scan');
@@ -390,20 +381,17 @@
         const btnText    = document.getElementById('btn-text');
         
         let currentStream = null;
-        let isResultMode = false; // Biến trạng thái để biết đang ở màn hình nào
+        let isResultMode = false;
 
-        // ── Hàm khởi động Camera ──
+        // ── Hàm khởi động hệ thống Camera ──
         async function startCamera() {
             try {
                 currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 video.srcObject = currentStream;
-                
-                // Hiển thị lại video, ẩn canvas
                 video.style.display = 'block';
                 canvas.style.display = 'none';
             } catch (error) {
-                console.error("Lỗi mở camera:", error);
-                // Fallback nếu không có camera sau
+                console.error("Lỗi mở camera sau:", error);
                 try {
                     currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
                     video.srcObject = currentStream;
@@ -415,57 +403,49 @@
             }
         }
 
-        // Tự động bật camera khi load trang
+        // Tự động kích hoạt khi học sinh mở trang web
         startCamera();
 
-        // ── Logic xử lý nút bấm ──
+        // ── Logic điều khiển nút bấm Chụp/Quét lại ──
         btnScan.addEventListener('click', async () => {
             
-            // NẾU ĐANG Ở CHẾ ĐỘ KẾT QUẢ -> BẤM LÀ QUÉT LẠI MÓN MỚI
+            // NẾU ĐANG HIỂN THỊ KẾT QUẢ -> CLICK SẼ RESET ĐỂ QUÉT VẬT THỂ MỚI
             if (isResultMode) {
-                // Ẩn bảng kết quả
                 const resultBox = document.getElementById('result-box');
                 resultBox.classList.remove('visible');
                 resultBox.style.display = 'none';
                 
-                // Đưa giao diện về trạng thái chụp
                 btnScan.classList.remove('btn-reset');
                 btnIcon.className = 'fa-solid fa-camera-retro';
                 btnText.textContent = 'BẤM CHỤP QUÉT RÁC THẢI';
                 isResultMode = false;
                 
-                // Khởi động lại camera
                 await startCamera();
                 return;
             }
 
-            // ==========================================
-            // NẾU ĐANG Ở CHẾ ĐỘ CHỤP -> BẮT ĐẦU CHỤP VÀ GỬI AI
-            // ==========================================
-            
-            // 1. Chuyển UI sang trạng thái đang quét
+            // NẾU ĐANG TRONG TRẠNG THÁI CHỤP -> TIẾN HÀNH CHỤP VÀ QUA MÁY CHỦ AI
             btnScan.disabled = true;
             btnIcon.className = 'fa-solid fa-spinner fa-spin';
             btnText.textContent = 'AI ĐANG PHÂN TÍCH ẢNH...';
             mainCard.classList.add('scanning');
 
-            // 2. Chụp khung hình hiện tại lên Canvas
+            // Chụp đóng băng khung hình và vẽ lên canvas ngầm
             canvas.width  = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
             const base64Image = canvas.toDataURL('image/jpeg');
 
-            // 3. Đóng băng hình ảnh trên màn hình (Ẩn Video, Hiện Canvas)
             video.style.display = 'none';
             canvas.style.display = 'block';
 
-            // 4. TẮT CAMERA HOÀN TOÀN để tránh nóng máy và tiết kiệm pin
+            // Giải phóng tài nguyên camera ngay lập tức giúp máy không bị nóng
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
                 currentStream = null;
             }
 
-            // 5. Gửi dữ liệu lên Backend
+            // Gửi dữ liệu Base64 lên Endpoint /predict
             try {
                 const response = await fetch('/predict', {
                     method: 'POST',
@@ -478,17 +458,15 @@
                 if (result.success) {
                     const resultBox = document.getElementById('result-box');
                     resultBox.classList.remove('visible');
-                    // Force reflow để animation chạy lại mượt mà
-                    void resultBox.offsetWidth;
+                    void resultBox.offsetWidth; // Trigger reflow ép làm mới animation
 
-                    // Xử lý text và điểm số
+                    // Hiển thị nội dung phân tích từ AI trả về
                     const aiText = result.prediction.replace(/\n/g, '<br>');
                     document.getElementById('res-huongdan').innerHTML = aiText;
 
-                    const diemCong = 10;
-                    document.getElementById('res-diem').innerText = diemCong;
-                    let prev = parseInt(document.getElementById('res-tongdiem').innerText) || 0;
-                    document.getElementById('res-tongdiem').innerText = prev + diemCong;
+                    // Đồng bộ điểm cộng thực tế từ AI và tổng quỹ điểm thật từ DB hệ thống
+                    document.getElementById('res-diem').innerText = result.diem_cong_tu_ai;
+                    document.getElementById('res-tongdiem').innerText = result.tong_diem_he_thong;
 
                     resultBox.style.display = 'block';
                     resultBox.classList.add('visible');
@@ -497,17 +475,17 @@
                     alert("Hệ thống AI bận: " + result.error);
                 }
             } catch (error) {
-                console.error("Lỗi chi tiết:", error);
+                console.error("Lỗi mạng:", error);
                 alert("Đã xảy ra lỗi kết nối với máy chủ AI!");
             }
 
-            // 6. Hoàn tất quá trình: Đổi nút thành "QUÉT MÓN KHÁC"
+            // Đổi giao diện nút bấm sang chế độ "QUÉT MÓN KHÁC"
             mainCard.classList.remove('scanning');
             btnScan.disabled = false;
-            btnScan.classList.add('btn-reset'); // Đổi màu nút để người dùng chú ý
+            btnScan.classList.add('btn-reset');
             btnIcon.className = 'fa-solid fa-rotate-right';
             btnText.textContent = 'QUÉT MÓN KHÁC';
-            isResultMode = true; // Bật cờ đánh dấu đã phân tích xong
+            isResultMode = true;
         });
     </script>
 </body>
