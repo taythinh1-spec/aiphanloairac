@@ -1,9 +1,7 @@
-Flask==3.0.2
-google-generativeai>=0.8.0
-Pillow==10.2.0
-pymongo==4.6.2
-gunicorn==21.2.0
-dnspython==2.6.1
-python-dotenv==1.0.1
-opencv-python-headless
-ultralytics
+flask
+google-generativeai
+Pillow
+pymongo
+dnspython
+python-dotenv
+gunicorn
